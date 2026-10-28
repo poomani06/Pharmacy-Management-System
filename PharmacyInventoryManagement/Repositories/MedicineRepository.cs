@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.SqlClient;
+﻿using System.Data;
+using Microsoft.Data.SqlClient;
 using PharmacyInventoryManagement.Helpers;
 using PharmacyInventoryManagement.Models;
 
@@ -6,37 +7,139 @@ namespace PharmacyInventoryManagement.Repositories;
 
 public class MedicineRepository
 {
-    public int Add(Medicine medicine)
+    public async Task<int> AddAsync(Medicine medicine)
     {
-        using SqlConnection connection = DatabaseHelper.CreateConnection();
-        connection.Open();
+        await using SqlConnection connection =
+            DatabaseHelper.CreateConnection();
 
-        string query = @"
-            INSERT INTO Medicines
-            (MedicineCode, MedicineName, Category, SupplierId,
-             BatchNumber, ExpiryDate, UnitPrice, StockQuantity,
-             ReorderLevel, IsActive)
-            VALUES
-            (@Code, @Name, @Category, @SupplierId,
-             @Batch, @Expiry, @Price, @Stock, @Reorder, 1);
+        await connection.OpenAsync();
 
-            SELECT CAST(SCOPE_IDENTITY() AS INT);";
+        string sql = """
+        INSERT INTO Medicines
+        (
+            MedicineCode,
+            MedicineName,
+            Category,
+            SupplierId,
+            BatchNumber,
+            ExpiryDate,
+            UnitPrice,
+            StockQuantity,
+            ReorderLevel,
+            IsActive
+        )
+        VALUES
+        (
+            @MedicineCode,
+            @MedicineName,
+            @Category,
+            @SupplierId,
+            @BatchNumber,
+            @ExpiryDate,
+            @UnitPrice,
+            @StockQuantity,
+            @ReorderLevel,
+            @IsActive
+        );
 
-        using SqlCommand command = new(query, connection);
-        command.Parameters.AddWithValue("@Code", medicine.MedicineCode);
-        command.Parameters.AddWithValue("@Name", medicine.MedicineName);
-        command.Parameters.AddWithValue("@Category",
-            (object?)medicine.Category ?? DBNull.Value);
-        command.Parameters.AddWithValue("@SupplierId", medicine.SupplierId);
-        command.Parameters.AddWithValue("@Batch", medicine.BatchNumber);
-        command.Parameters.AddWithValue("@Expiry", medicine.ExpiryDate.Date);
-        command.Parameters.AddWithValue("@Price", medicine.UnitPrice);
-        command.Parameters.AddWithValue("@Stock", medicine.StockQuantity);
-        command.Parameters.AddWithValue("@Reorder", medicine.ReorderLevel);
+        SELECT CAST(SCOPE_IDENTITY() AS INT);
+        """;
 
-        return (int)command.ExecuteScalar()!;
+        await using SqlCommand command =
+            new SqlCommand(sql, connection);
+
+        command.Parameters.Add("@MedicineCode", SqlDbType.NVarChar, 50)
+            .Value = medicine.MedicineCode;
+
+        command.Parameters.Add("@MedicineName", SqlDbType.NVarChar, 100)
+            .Value = medicine.MedicineName;
+
+        command.Parameters.Add("@Category", SqlDbType.NVarChar, 50)
+            .Value = (object?)medicine.Category ?? DBNull.Value;
+
+        command.Parameters.Add("@SupplierId", SqlDbType.Int)
+            .Value = medicine.SupplierId;
+
+        command.Parameters.Add("@BatchNumber", SqlDbType.NVarChar, 50)
+            .Value = medicine.BatchNumber;
+
+        command.Parameters.Add("@ExpiryDate", SqlDbType.Date)
+            .Value = medicine.ExpiryDate;
+
+        SqlParameter priceParameter =
+            command.Parameters.Add("@UnitPrice", SqlDbType.Decimal);
+
+        priceParameter.Precision = 10;
+        priceParameter.Scale = 2;
+        priceParameter.Value = medicine.UnitPrice;
+
+        command.Parameters.Add("@StockQuantity", SqlDbType.Int)
+            .Value = medicine.StockQuantity;
+
+        command.Parameters.Add("@ReorderLevel", SqlDbType.Int)
+            .Value = medicine.ReorderLevel;
+
+        command.Parameters.Add("@IsActive", SqlDbType.Bit)
+            .Value = true;
+
+        object? result = await command.ExecuteScalarAsync();
+
+        return Convert.ToInt32(result);
     }
+    public async Task<List<Medicine>> GetAllAsync()
+    {
+        List<Medicine> medicines = new List<Medicine>();
 
-    
-    
+        await using SqlConnection connection =
+            DatabaseHelper.CreateConnection();
+
+        await connection.OpenAsync();
+
+        string sql = """
+        SELECT
+            MedicineId,
+            MedicineCode,
+            MedicineName,
+            Category,
+            SupplierId,
+            BatchNumber,
+            ExpiryDate,
+            UnitPrice,
+            StockQuantity,
+            ReorderLevel,
+            IsActive,
+            CreatedAt
+        FROM Medicines
+        ORDER BY MedicineId;
+        """;
+
+        await using SqlCommand command =
+            new SqlCommand(sql, connection);
+
+        await using SqlDataReader reader =
+            await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            Medicine medicine = new Medicine
+            {
+                MedicineId = reader.GetInt32(0),
+                MedicineCode = reader.GetString(1),
+                MedicineName = reader.GetString(2),
+                Category = reader.IsDBNull(3) ? null : reader.GetString(3),
+                SupplierId = reader.GetInt32(4),
+                BatchNumber = reader.GetString(5),
+                ExpiryDate = reader.GetDateTime(6),
+                UnitPrice = reader.GetDecimal(7),
+                StockQuantity = reader.GetInt32(8),
+                ReorderLevel = reader.GetInt32(9),
+                IsActive = reader.GetBoolean(10),
+                CreatedAt = reader.GetDateTime(11)
+            };
+
+            medicines.Add(medicine);
+        }
+
+        return medicines;
+    }
 }
