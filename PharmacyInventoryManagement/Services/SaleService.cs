@@ -56,4 +56,15 @@ public class SaleService
         return await _saleRepository.GetAllAsync();
     }
 
+    public async Task<Sale?> GetSaleByIdAsync(int saleId)
+    {
+        if (saleId <= 0)
+        {
+            throw new ArgumentException("Sale ID must be greater than zero.");
+        }
+
+        return await _saleRepository.GetByIdAsync(saleId);
+    }
+
+
 }
