@@ -1,4 +1,5 @@
-﻿namespace PharmacyInventoryManagement.Models;
+﻿
+namespace PharmacyInventoryManagement.Models;
 
 public class Medicine
 {
