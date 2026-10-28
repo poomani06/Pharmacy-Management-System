@@ -199,6 +199,48 @@ public class SupplierRepository
         return suppliers;
     }
 
+    public async Task<bool> UpdateAsync(Supplier supplier)
+    {
+        await using SqlConnection connection =
+            DatabaseHelper.CreateConnection();
+
+        await connection.OpenAsync();
+
+        string sql = """
+        UPDATE Suppliers
+        SET
+            SupplierName = @SupplierName,
+            Phone = @Phone,
+            Email = @Email,
+            Address = @Address
+        WHERE SupplierId = @SupplierId
+          AND IsActive = 1;
+        """;
+
+        await using SqlCommand command =
+            new SqlCommand(sql, connection);
+
+        command.Parameters.Add("@SupplierId", SqlDbType.Int)
+            .Value = supplier.SupplierId;
+
+        command.Parameters.Add("@SupplierName", SqlDbType.NVarChar, 100)
+            .Value = supplier.SupplierName;
+
+        command.Parameters.Add("@Phone", SqlDbType.NVarChar, 20)
+            .Value = (object?)supplier.Phone ?? DBNull.Value;
+
+        command.Parameters.Add("@Email", SqlDbType.NVarChar, 100)
+            .Value = (object?)supplier.Email ?? DBNull.Value;
+
+        command.Parameters.Add("@Address", SqlDbType.NVarChar, 250)
+            .Value = (object?)supplier.Address ?? DBNull.Value;
+
+        int rowsAffected = await command.ExecuteNonQueryAsync();
+
+        return rowsAffected > 0;
+    }
+
+
 
 
 }

@@ -48,5 +48,22 @@ public class SupplierService
         return await _supplierRepository.SearchAsync(searchText);
     }
 
+    public async Task<bool> UpdateSupplierAsync(Supplier supplier)
+    {
+        if (supplier.SupplierId <= 0)
+            throw new ArgumentException("Valid supplier ID is required.");
+
+        if (string.IsNullOrWhiteSpace(supplier.SupplierName))
+            throw new ArgumentException("Supplier name is required.");
+
+        if (!string.IsNullOrWhiteSpace(supplier.Email) &&
+            !supplier.Email.Contains('@'))
+        {
+            throw new ArgumentException("Enter a valid supplier email.");
+        }
+
+        return await _supplierRepository.UpdateAsync(supplier);
+    }
+
 
 }
