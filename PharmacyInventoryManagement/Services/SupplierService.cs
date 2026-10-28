@@ -26,4 +26,27 @@ public class SupplierService
 
         return await _supplierRepository.AddAsync(supplier);
     }
+
+    public async Task<List<Supplier>> GetAllSuppliersAsync()
+    {
+        return await _supplierRepository.GetAllAsync();
+    }
+
+    public async Task<Supplier?> GetSupplierByIdAsync(int supplierId)
+    {
+        if (supplierId <= 0)
+            throw new ArgumentException("Supplier ID must be greater than zero.");
+
+        return await _supplierRepository.GetByIdAsync(supplierId);
+    }
+
+    public async Task<List<Supplier>> SearchSuppliersAsync(string searchText)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+            throw new ArgumentException("Enter a supplier name to search.");
+
+        return await _supplierRepository.SearchAsync(searchText);
+    }
+
+
 }
