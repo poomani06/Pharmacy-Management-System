@@ -51,4 +51,9 @@ public class SaleService
         return await _saleRepository.AddAsync(sale);
     }
 
+    public async Task<List<Sale>> GetAllSalesAsync()
+    {
+        return await _saleRepository.GetAllAsync();
+    }
+
 }

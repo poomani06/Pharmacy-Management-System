@@ -120,4 +120,53 @@ public class SaleRepository
         }
     }
 
+    public async Task<List<Sale>> GetAllAsync()
+    {
+        List<Sale> sales = new List<Sale>();
+
+        await using SqlConnection connection =
+            DatabaseHelper.CreateConnection();
+
+        await connection.OpenAsync();
+
+        string sql = """
+        SELECT
+            SaleId,
+            MedicineId,
+            MedicineNameSnapshot,
+            Quantity,
+            UnitPrice,
+            TotalAmount,
+            SoldAt,
+            SaleStatus
+        FROM Sales
+        ORDER BY SoldAt DESC;
+        """;
+
+        await using SqlCommand command =
+            new SqlCommand(sql, connection);
+
+        await using SqlDataReader reader =
+            await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            Sale sale = new Sale
+            {
+                SaleId = reader.GetInt32(0),
+                MedicineId = reader.GetInt32(1),
+                MedicineNameSnapshot = reader.GetString(2),
+                Quantity = reader.GetInt32(3),
+                UnitPrice = reader.GetDecimal(4),
+                TotalAmount = reader.GetDecimal(5),
+                SoldAt = reader.GetDateTime(6),
+                SaleStatus = reader.GetString(7)
+            };
+
+            sales.Add(sale);
+        }
+
+        return sales;
+    }
+
 }
