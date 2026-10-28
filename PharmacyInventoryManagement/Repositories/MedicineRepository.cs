@@ -142,4 +142,63 @@ public class MedicineRepository
 
         return medicines;
     }
+
+    public async Task<Medicine?> GetByIdAsync(int medicineId)
+    {
+        await using SqlConnection connection =
+            DatabaseHelper.CreateConnection();
+
+        await connection.OpenAsync();
+
+        string sql = """
+        SELECT
+            MedicineId,
+            MedicineCode,
+            MedicineName,
+            Category,
+            SupplierId,
+            BatchNumber,
+            ExpiryDate,
+            UnitPrice,
+            StockQuantity,
+            ReorderLevel,
+            IsActive,
+            CreatedAt
+        FROM Medicines
+        WHERE MedicineId = @MedicineId;
+        """;
+
+        await using SqlCommand command =
+            new SqlCommand(sql, connection);
+
+        command.Parameters.Add("@MedicineId", SqlDbType.Int)
+            .Value = medicineId;
+
+        await using SqlDataReader reader =
+            await command.ExecuteReaderAsync();
+
+        if (await reader.ReadAsync())
+        {
+            Medicine medicine = new Medicine
+            {
+                MedicineId = reader.GetInt32(0),
+                MedicineCode = reader.GetString(1),
+                MedicineName = reader.GetString(2),
+                Category = reader.IsDBNull(3) ? null : reader.GetString(3),
+                SupplierId = reader.GetInt32(4),
+                BatchNumber = reader.GetString(5),
+                ExpiryDate = reader.GetDateTime(6),
+                UnitPrice = reader.GetDecimal(7),
+                StockQuantity = reader.GetInt32(8),
+                ReorderLevel = reader.GetInt32(9),
+                IsActive = reader.GetBoolean(10),
+                CreatedAt = reader.GetDateTime(11)
+            };
+
+            return medicine;
+        }
+
+        return null;
+    }
+
 }
