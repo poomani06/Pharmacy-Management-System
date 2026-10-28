@@ -296,5 +296,183 @@ public class SaleRepository
         return sales;
     }
 
+    public async Task<decimal> GetTotalSalesAsync()
+    {
+        await using var connection = DatabaseHelper.CreateConnection();
+        await connection.OpenAsync();
+
+        const string query = """
+        SELECT ISNULL(SUM(TotalAmount), 0)
+        FROM Sales
+        WHERE SaleStatus = @SaleStatus;
+        """;
+
+        await using var command = new SqlCommand(query, connection);
+
+        command.Parameters.Add("@SaleStatus", SqlDbType.NVarChar, 50)
+            .Value = "Completed";
+
+        object? result = await command.ExecuteScalarAsync();
+
+        return Convert.ToDecimal(result);
+    }
+
+    public async Task<decimal> GetTodaySalesAsync()
+    {
+        await using var connection = DatabaseHelper.CreateConnection();
+        await connection.OpenAsync();
+
+        const string query = """
+        SELECT ISNULL(SUM(TotalAmount), 0)
+        FROM Sales
+        WHERE SaleStatus = @SaleStatus
+          AND SoldAt >= @StartDate
+          AND SoldAt < @EndDate;
+        """;
+
+        DateTime today = DateTime.Today;
+
+        await using var command = new SqlCommand(query, connection);
+
+        command.Parameters.Add("@SaleStatus", SqlDbType.NVarChar, 50)
+            .Value = "Completed";
+
+        command.Parameters.Add("@StartDate", SqlDbType.DateTime)
+            .Value = today;
+
+        command.Parameters.Add("@EndDate", SqlDbType.DateTime)
+            .Value = today.AddDays(1);
+
+        object? result = await command.ExecuteScalarAsync();
+
+        return Convert.ToDecimal(result);
+    }
+
+    public async Task<int> GetTotalQuantitySoldAsync()
+    {
+        await using var connection = DatabaseHelper.CreateConnection();
+        await connection.OpenAsync();
+
+        const string query = """
+        SELECT ISNULL(SUM(Quantity), 0)
+        FROM Sales
+        WHERE SaleStatus = @SaleStatus;
+        """;
+
+        await using var command = new SqlCommand(query, connection);
+
+        command.Parameters.Add("@SaleStatus", SqlDbType.NVarChar, 50)
+            .Value = "Completed";
+
+        object? result = await command.ExecuteScalarAsync();
+
+        return Convert.ToInt32(result);
+    }
+
+
+    public async Task<bool> CancelAsync(int saleId)
+    {
+        await using var connection = DatabaseHelper.CreateConnection();
+        await connection.OpenAsync();
+
+        using SqlTransaction transaction =
+            (SqlTransaction)await connection.BeginTransactionAsync();
+
+        try
+        {
+            int medicineId;
+            int quantity;
+
+            const string findQuery = """
+            SELECT MedicineId, Quantity
+            FROM Sales
+            WHERE SaleId = @SaleId
+              AND SaleStatus = @SaleStatus;
+            """;
+
+            await using (var findCommand =
+                new SqlCommand(findQuery, connection, transaction))
+            {
+                findCommand.Parameters.Add("@SaleId", SqlDbType.Int)
+                    .Value = saleId;
+
+                findCommand.Parameters.Add("@SaleStatus", SqlDbType.NVarChar, 50)
+                    .Value = "Completed";
+
+                await using var reader = await findCommand.ExecuteReaderAsync();
+
+                if (!await reader.ReadAsync())
+                {
+                    await reader.CloseAsync();
+                    await transaction.RollbackAsync();
+                    return false;
+                }
+
+                medicineId = reader.GetInt32(0);
+                quantity = reader.GetInt32(1);
+            }
+
+            const string stockQuery = """
+            UPDATE Medicines
+            SET StockQuantity = StockQuantity + @Quantity
+            WHERE MedicineId = @MedicineId;
+            """;
+
+            await using (var stockCommand =
+                new SqlCommand(stockQuery, connection, transaction))
+            {
+                stockCommand.Parameters.Add("@Quantity", SqlDbType.Int)
+                    .Value = quantity;
+
+                stockCommand.Parameters.Add("@MedicineId", SqlDbType.Int)
+                    .Value = medicineId;
+
+                int stockRows = await stockCommand.ExecuteNonQueryAsync();
+
+                if (stockRows == 0)
+                {
+                    throw new InvalidOperationException(
+                        "Medicine record was not found.");
+                }
+            }
+
+            const string cancelQuery = """
+            UPDATE Sales
+            SET SaleStatus = @CancelledStatus
+            WHERE SaleId = @SaleId
+              AND SaleStatus = @CompletedStatus;
+            """;
+
+            await using (var cancelCommand =
+                new SqlCommand(cancelQuery, connection, transaction))
+            {
+                cancelCommand.Parameters.Add("@CancelledStatus", SqlDbType.NVarChar, 50)
+                    .Value = "Cancelled";
+
+                cancelCommand.Parameters.Add("@SaleId", SqlDbType.Int)
+                    .Value = saleId;
+
+                cancelCommand.Parameters.Add("@CompletedStatus", SqlDbType.NVarChar, 50)
+                    .Value = "Completed";
+
+                int saleRows = await cancelCommand.ExecuteNonQueryAsync();
+
+                if (saleRows == 0)
+                {
+                    throw new InvalidOperationException(
+                        "Sale could not be cancelled.");
+                }
+            }
+
+            await transaction.CommitAsync();
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync();
+            throw;
+        }
+    }
+
 
 }

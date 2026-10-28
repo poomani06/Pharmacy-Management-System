@@ -91,5 +91,32 @@ public class SaleService
             endDate);
     }
 
+    public async Task<decimal> GetTotalSalesAsync()
+    {
+        return await _saleRepository.GetTotalSalesAsync();
+    }
+
+    public async Task<decimal> GetTodaySalesAsync()
+    {
+        return await _saleRepository.GetTodaySalesAsync();
+    }
+
+    public async Task<int> GetTotalQuantitySoldAsync()
+    {
+        return await _saleRepository.GetTotalQuantitySoldAsync();
+    }
+
+
+    public async Task<bool> CancelSaleAsync(int saleId)
+    {
+        if (saleId <= 0)
+        {
+            throw new ArgumentException(
+                "Sale ID must be greater than zero.");
+        }
+
+        return await _saleRepository.CancelAsync(saleId);
+    }
+
 
 }
