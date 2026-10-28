@@ -118,5 +118,21 @@ public class SaleService
         return await _saleRepository.CancelAsync(saleId);
     }
 
+    public async Task<int> GetCompletedSalesCountAsync()
+    {
+        return await _saleRepository.GetCompletedSalesCountAsync();
+    }
+
+    public async Task<decimal?> GetSaleTotalAsync(int saleId)
+    {
+        if (saleId <= 0)
+        {
+            throw new ArgumentException(
+                "Sale ID must be greater than zero.");
+        }
+
+        return await _saleRepository.GetSaleTotalAsync(saleId);
+    }
+
 
 }

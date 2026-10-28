@@ -65,5 +65,13 @@ public class SupplierService
         return await _supplierRepository.UpdateAsync(supplier);
     }
 
+    public async Task<bool> DeleteSupplierAsync(int supplierId)
+    {
+        if (supplierId <= 0)
+            throw new ArgumentException("Supplier ID must be greater than zero.");
+
+        return await _supplierRepository.DeleteAsync(supplierId);
+    }
+
 
 }

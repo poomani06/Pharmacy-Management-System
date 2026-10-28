@@ -240,6 +240,32 @@ public class SupplierRepository
         return rowsAffected > 0;
     }
 
+    public async Task<bool> DeleteAsync(int supplierId)
+    {
+        await using SqlConnection connection =
+            DatabaseHelper.CreateConnection();
+
+        await connection.OpenAsync();
+
+        string sql = """
+        UPDATE Suppliers
+        SET IsActive = 0
+        WHERE SupplierId = @SupplierId
+          AND IsActive = 1;
+        """;
+
+        await using SqlCommand command =
+            new SqlCommand(sql, connection);
+
+        command.Parameters.Add("@SupplierId", SqlDbType.Int)
+            .Value = supplierId;
+
+        int rowsAffected = await command.ExecuteNonQueryAsync();
+
+        return rowsAffected > 0;
+    }
+
+
 
 
 

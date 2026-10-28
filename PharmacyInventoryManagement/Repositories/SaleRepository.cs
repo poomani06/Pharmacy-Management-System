@@ -348,6 +348,38 @@ public class SaleRepository
         return Convert.ToDecimal(result);
     }
 
+    public async Task<decimal?> GetSaleTotalAsync(int saleId)
+    {
+        await using var connection =
+            DatabaseHelper.CreateConnection();
+
+        await connection.OpenAsync();
+
+        const string query = """
+        SELECT TotalAmount
+        FROM Sales
+        WHERE SaleId = @SaleId
+          AND SaleStatus = @SaleStatus;
+        """;
+
+        await using var command = new SqlCommand(query, connection);
+
+        command.Parameters.Add("@SaleId", SqlDbType.Int)
+            .Value = saleId;
+
+        command.Parameters.Add("@SaleStatus", SqlDbType.NVarChar, 50)
+            .Value = "Completed";
+
+        object? result = await command.ExecuteScalarAsync();
+
+        if (result == null || result == DBNull.Value)
+        {
+            return null;
+        }
+
+        return Convert.ToDecimal(result);
+    }
+
     public async Task<int> GetTotalQuantitySoldAsync()
     {
         await using var connection = DatabaseHelper.CreateConnection();
@@ -473,6 +505,28 @@ public class SaleRepository
             throw;
         }
     }
+
+    public async Task<int> GetCompletedSalesCountAsync()
+    {
+        await using var connection = DatabaseHelper.CreateConnection();
+        await connection.OpenAsync();
+
+        const string query = """
+        SELECT COUNT(*)
+        FROM Sales
+        WHERE SaleStatus = @SaleStatus;
+        """;
+
+        await using var command = new SqlCommand(query, connection);
+
+        command.Parameters.Add("@SaleStatus", SqlDbType.NVarChar, 50)
+            .Value = "Completed";
+
+        object? result = await command.ExecuteScalarAsync();
+
+        return Convert.ToInt32(result);
+    }
+
 
 
 }
