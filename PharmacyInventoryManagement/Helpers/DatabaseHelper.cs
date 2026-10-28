@@ -1,10 +1,15 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
+﻿using Microsoft.Data.SqlClient;
 
-namespace PharmacyInventoryManagement.Helpers
+namespace PharmacyInventoryManagement.Helpers;
+
+public static class DatabaseHelper
 {
-    internal class DatabaseHelper
+    private const string ConnectionString =
+        @"Server=.\SQLEXPRESS;Database=PharmacyInventoryDB;" +
+        @"Trusted_Connection=True;TrustServerCertificate=True;";
+
+    public static SqlConnection CreateConnection()
     {
+        return new SqlConnection(ConnectionString);
     }
 }
