@@ -169,4 +169,132 @@ public class SaleRepository
         return sales;
     }
 
+    public async Task<Sale?> GetByIdAsync(int saleId)
+    {
+        await using var connection = DatabaseHelper.CreateConnection();
+        await connection.OpenAsync();
+
+        const string query = """
+        SELECT SaleId, MedicineId, MedicineNameSnapshot,
+               Quantity, UnitPrice, TotalAmount, SoldAt, SaleStatus
+        FROM Sales
+        WHERE SaleId = @SaleId;
+        """;
+
+        await using var command = new SqlCommand(query, connection);
+
+        command.Parameters.Add("@SaleId", SqlDbType.Int).Value = saleId;
+
+        await using var reader = await command.ExecuteReaderAsync();
+
+        if (await reader.ReadAsync())
+        {
+            return new Sale
+            {
+                SaleId = reader.GetInt32(0),
+                MedicineId = reader.GetInt32(1),
+                MedicineNameSnapshot = reader.GetString(2),
+                Quantity = reader.GetInt32(3),
+                UnitPrice = reader.GetDecimal(4),
+                TotalAmount = reader.GetDecimal(5),
+                SoldAt = reader.GetDateTime(6),
+                SaleStatus = reader.GetString(7)
+            };
+        }
+
+        return null;
+    }
+
+
+    public async Task<List<Sale>> SearchAsync(string searchText)
+    {
+        List<Sale> sales = new List<Sale>();
+
+        await using var connection = DatabaseHelper.CreateConnection();
+        await connection.OpenAsync();
+
+        const string query = """
+        SELECT SaleId, MedicineId, MedicineNameSnapshot,
+               Quantity, UnitPrice, TotalAmount, SoldAt, SaleStatus
+        FROM Sales
+        WHERE MedicineNameSnapshot LIKE @SearchText
+        ORDER BY SoldAt DESC;
+        """;
+
+        await using var command = new SqlCommand(query, connection);
+
+        command.Parameters.Add("@SearchText", SqlDbType.NVarChar, 200)
+            .Value = "%" + searchText.Trim() + "%";
+
+        await using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            Sale sale = new Sale
+            {
+                SaleId = reader.GetInt32(0),
+                MedicineId = reader.GetInt32(1),
+                MedicineNameSnapshot = reader.GetString(2),
+                Quantity = reader.GetInt32(3),
+                UnitPrice = reader.GetDecimal(4),
+                TotalAmount = reader.GetDecimal(5),
+                SoldAt = reader.GetDateTime(6),
+                SaleStatus = reader.GetString(7)
+            };
+
+            sales.Add(sale);
+        }
+
+        return sales;
+    }
+
+    public async Task<List<Sale>> GetByDateRangeAsync(
+        DateTime startDate,
+        DateTime endDate)
+    {
+        List<Sale> sales = new List<Sale>();
+
+        await using var connection = DatabaseHelper.CreateConnection();
+        await connection.OpenAsync();
+
+        const string query = """
+        SELECT SaleId, MedicineId, MedicineNameSnapshot,
+               Quantity, UnitPrice, TotalAmount, SoldAt, SaleStatus
+        FROM Sales
+        WHERE SoldAt >= @StartDate
+          AND SoldAt < @EndDate
+        ORDER BY SoldAt DESC;
+        """;
+
+        await using var command = new SqlCommand(query, connection);
+
+        command.Parameters.Add("@StartDate", SqlDbType.DateTime).Value =
+            startDate.Date;
+
+        command.Parameters.Add("@EndDate", SqlDbType.DateTime).Value =
+            endDate.Date.AddDays(1);
+
+        await using var reader = await command.ExecuteReaderAsync();
+
+        while (await reader.ReadAsync())
+        {
+            Sale sale = new Sale
+            {
+                SaleId = reader.GetInt32(0),
+                MedicineId = reader.GetInt32(1),
+                MedicineNameSnapshot = reader.GetString(2),
+                Quantity = reader.GetInt32(3),
+                UnitPrice = reader.GetDecimal(4),
+                TotalAmount = reader.GetDecimal(5),
+                SoldAt = reader.GetDateTime(6),
+                SaleStatus = reader.GetString(7)
+            };
+
+            sales.Add(sale);
+        }
+
+        return sales;
+    }
+
+
 }

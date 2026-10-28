@@ -66,5 +66,30 @@ public class SaleService
         return await _saleRepository.GetByIdAsync(saleId);
     }
 
+    public async Task<List<Sale>> SearchSalesAsync(string searchText)
+    {
+        if (string.IsNullOrWhiteSpace(searchText))
+        {
+            throw new ArgumentException("Medicine name cannot be empty.");
+        }
+
+        return await _saleRepository.SearchAsync(searchText);
+    }
+
+    public async Task<List<Sale>> GetSalesByDateRangeAsync(
+        DateTime startDate,
+        DateTime endDate)
+    {
+        if (startDate.Date > endDate.Date)
+        {
+            throw new ArgumentException(
+                "Start date cannot be after the end date.");
+        }
+
+        return await _saleRepository.GetByDateRangeAsync(
+            startDate,
+            endDate);
+    }
+
 
 }
